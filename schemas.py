@@ -249,6 +249,29 @@ SEARCH_GITHUB_CODE = {
     },
 }
 
+GET_GITHUB_FILE_CONTENT = {
+    "name": "get_github_file_content",
+    "description": (
+        "Reads the actual content of one file in the monorepo — "
+        "search_github_code only gives file paths/matches, never the "
+        "content itself. Call this once search_github_code has narrowed "
+        "down a specific file, to actually read the code and confirm "
+        "what it does rather than guessing from the path/match snippet "
+        "alone. Uses GitHub's authenticated Contents API — an "
+        "unauthenticated raw.githubusercontent.com fetch will 404 on "
+        "this private repo."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "path": {"type": "string", "description": "File path within the repo, e.g. 'apps/vapi_app/src/integrators/gateway/models.py'."},
+            "repo": {"type": "string", "description": "owner/repo, defaults to Skabadis/Sandra-AI-pipecat."},
+            "ref": {"type": "string", "description": "branch/commit/tag — omit to use the default branch."},
+        },
+        "required": ["path"],
+    },
+}
+
 QUERY_SENTRY_ISSUES = {
     "name": "query_sentry_issues",
     "description": (

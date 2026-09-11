@@ -72,6 +72,12 @@ def register(ctx):
         handler=tools.post_intercom_note,
     )
     ctx.register_tool(
+        name="get_github_file_content",
+        toolset="project",
+        schema=schemas.GET_GITHUB_FILE_CONTENT,
+        handler=tools.get_github_file_content,
+    )
+    ctx.register_tool(
         name="query_sentry_issues",
         toolset="project",
         schema=schemas.QUERY_SENTRY_ISSUES,

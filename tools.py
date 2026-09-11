@@ -585,6 +585,45 @@ def search_github_code(args: dict, **kwargs) -> str:
     return _ok(response)
 
 
+def get_github_file_content(args: dict, **kwargs) -> str:
+    # search_github_code only gives file paths — this reads the actual
+    # content of one file. Real gap found 2026-09-11 (ticket
+    # 215475895231206): an unauthenticated raw.githubusercontent.com fetch
+    # 404s on this private repo. The Contents API below works because it's
+    # authenticated with the same GITHUB_SEARCH_TOKEN.
+    path = args.get("path")
+    repo = args.get("repo", GITHUB_REPO)
+    ref = args.get("ref")  # optional — omit to use the repo's default branch
+
+    github_token = _env("GITHUB_SEARCH_TOKEN")
+    if not github_token:
+        return _err("GITHUB_SEARCH_TOKEN not configured")
+    if not path:
+        return _err("path is required")
+
+    try:
+        r = httpx.get(
+            f"https://api.github.com/repos/{repo}/contents/{path}",
+            headers={"Authorization": f"Bearer {github_token}", "Accept": "application/vnd.github+json"},
+            params={"ref": ref} if ref else {},
+            timeout=20,
+        )
+        r.raise_for_status()
+        data = r.json()
+    except Exception as e:
+        return _err(str(e))
+
+    if isinstance(data, list):
+        return _err(f"'{path}' is a directory, not a file — pass a file path")
+
+    if data.get("encoding") == "base64" and data.get("content"):
+        content = base64.b64decode(data["content"]).decode("utf-8", errors="replace")
+    else:
+        content = data.get("content", "")
+
+    return _ok({"path": path, "repo": repo, "sha": data.get("sha"), "size": data.get("size"), "content": content})
+
+
 # ---------------------------------------------------------------------------
 # Sentry — issue search + issue detail (read-only Auth Token, no OAuth)
 #
