@@ -585,7 +585,6 @@ SENTRY_ORG = "sandra-ai"
 
 
 def query_sentry_issues(args: dict, **kwargs) -> str:
-    project = args.get("project")
     query = args.get("query", "is:unresolved")
     stats_period = args.get("stats_period", "14d")
     sort = args.get("sort", "date")
@@ -594,14 +593,12 @@ def query_sentry_issues(args: dict, **kwargs) -> str:
     sentry_token = _env("SENTRY_AUTH_TOKEN")
     if not sentry_token:
         return _err("SENTRY_AUTH_TOKEN not configured")
-    if not project:
-        return _err("project is required (Sentry project slug)")
 
     try:
         r = httpx.get(
-            f"{SENTRY_API}/projects/{SENTRY_ORG}/{project}/issues/",
+            f"{SENTRY_API}/organizations/{SENTRY_ORG}/issues/",
             headers={"Authorization": f"Bearer {sentry_token}"},
-            params={"query": query, "statsPeriod": stats_period, "sort": sort, "limit": limit},
+            params={"query": query, "statsPeriod": stats_period, "sort": sort, "limit": limit, "project": -1},
             timeout=20,
         )
         r.raise_for_status()

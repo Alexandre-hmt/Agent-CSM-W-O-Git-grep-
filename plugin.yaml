@@ -1,5 +1,5 @@
 name: sandra-triage-tools-v4
-version: 4.2.0
+version: 4.4.0
 description: Intercom/DB/vapi_app/platform_app/GitHub tools for the Sandra AI triage agent, ported from agent.py. v4 replaces local git grep with the GitHub Code Search API (no shell/local clone on this instance).
 author: Sandra AI
 provides_tools:
