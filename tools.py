@@ -38,12 +38,27 @@ except ImportError:
 
     httpx = _MissingHTTPX()
 
+# psycopg2-binary can't be installed into the sealed venv (site-packages is
+# read-only on this Hermes Cloud instance). It CAN be installed to a durable,
+# writable target dir (HERMES_LAZY_INSTALL_TARGET, e.g. /opt/data/lazy_installs
+# — confirmed working 2026-09-11 via lazy_deps.install_specs() from an
+# execute_code kernel). That install is on shared persistent storage, but this
+# plugin runs in the gateway process, a different process than that kernel —
+# so it must add the target dir to sys.path itself; nothing does that for it
+# automatically just because the env var is set.
+import sys
+
+_lazy_install_target = os.environ.get("HERMES_LAZY_INSTALL_TARGET")
+if _lazy_install_target and _lazy_install_target not in sys.path:
+    sys.path.append(_lazy_install_target)
+
 try:
     import psycopg2
     import psycopg2.extras
 except ImportError:
-    # Hermes validates python_dependencies but does not install them. Keep the
-    # plugin loadable so non-database tools remain available on hosted backends.
+    # Either HERMES_LAZY_INSTALL_TARGET isn't set/passed through to this
+    # process, or psycopg2-binary was never installed there yet. Keep the
+    # plugin loadable so non-database tools remain available regardless.
     psycopg2 = None
 
 

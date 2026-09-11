@@ -1,5 +1,5 @@
 name: sandra-triage-tools-v4
-version: 4.4.0
+version: 4.5.0
 description: Intercom/DB/vapi_app/platform_app/GitHub tools for the Sandra AI triage agent, ported from agent.py. v4 replaces local git grep with the GitHub Code Search API (no shell/local clone on this instance).
 author: Sandra AI
 provides_tools:
@@ -28,3 +28,10 @@ provides_tools:
 # by Hermes for its own Skills Hub feature and is invisible to plugin tools),
 # ALLOW_INTERCOM_NOTE_POSTING (must stay unset/false),
 # SENTRY_AUTH_TOKEN (read-only: org:read, project:read, event:read scopes).
+#
+# HERMES_LAZY_INSTALL_TARGET must also be set (e.g. /opt/data/lazy_installs)
+# for the DB tools (query_calls_analytics, get_call_transcript,
+# get_pipecat_trace) to work at all: the gateway's own venv is sealed
+# (read-only site-packages), so psycopg2-binary can only be installed into
+# this separate, writable, persistent target dir — see tools.py's import
+# block for exactly how this gets picked up.
