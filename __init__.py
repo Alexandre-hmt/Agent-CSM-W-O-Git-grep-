@@ -71,3 +71,15 @@ def register(ctx):
         schema=schemas.POST_INTERCOM_NOTE,
         handler=tools.post_intercom_note,
     )
+    ctx.register_tool(
+        name="query_sentry_issues",
+        toolset="project",
+        schema=schemas.QUERY_SENTRY_ISSUES,
+        handler=tools.query_sentry_issues,
+    )
+    ctx.register_tool(
+        name="get_sentry_issue_detail",
+        toolset="project",
+        schema=schemas.GET_SENTRY_ISSUE_DETAIL,
+        handler=tools.get_sentry_issue_detail,
+    )

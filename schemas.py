@@ -249,6 +249,54 @@ SEARCH_GITHUB_CODE = {
     },
 }
 
+QUERY_SENTRY_ISSUES = {
+    "name": "query_sentry_issues",
+    "description": (
+        "Searches Sentry issues in one project via the plain REST API "
+        "(read-only Auth Token, no OAuth — the native Sentry MCP is "
+        "blocked by a platform bug on this instance). Keep queries "
+        "scoped to the actual ticket: always pass `project` and a real "
+        "`query`/`stats_period` tied to something already known "
+        "(a dealership/customer/error type) — never a blanket unscoped "
+        "search across all issues. If nothing relevant turns up, say so "
+        "rather than broadening the search repeatedly."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "project": {
+                "type": "string",
+                "description": "Sentry project slug. Ask if unsure which project maps to which app/repo.",
+            },
+            "query": {
+                "type": "string",
+                "description": "Sentry search syntax, e.g. 'is:unresolved' or a free-text term. Defaults to 'is:unresolved'.",
+            },
+            "stats_period": {
+                "type": "string",
+                "description": "How far back, e.g. '24h', '14d', '90d'. Defaults to '14d'.",
+            },
+            "sort": {"type": "string", "description": "e.g. 'date', 'new', 'freq'. Defaults to 'date'."},
+            "limit": {"type": "integer"},
+        },
+        "required": ["project"],
+    },
+}
+
+GET_SENTRY_ISSUE_DETAIL = {
+    "name": "get_sentry_issue_detail",
+    "description": (
+        "Fetches full detail for one specific Sentry issue, including the "
+        "latest event's message/tags/exception data — call this after "
+        "query_sentry_issues has narrowed down a specific issue id."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {"issue_id": {"type": "string"}},
+        "required": ["issue_id"],
+    },
+}
+
 POST_INTERCOM_NOTE = {
     "name": "post_intercom_note",
     "description": (

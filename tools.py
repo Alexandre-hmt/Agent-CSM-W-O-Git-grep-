@@ -571,6 +571,97 @@ def search_github_code(args: dict, **kwargs) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Sentry — issue search + issue detail (read-only Auth Token, no OAuth)
+#
+# The native Sentry MCP is blocked by a platform-level OAuth bug on this
+# Hermes Cloud instance (see CONTEXTE AGENT / the mcp-integrations notes
+# for the full diagnosis). This calls Sentry's plain REST API instead,
+# with a static Auth Token scoped to org:read/project:read/event:read —
+# read-only by construction, no write scope exists to accidentally use.
+# ---------------------------------------------------------------------------
+
+SENTRY_API = "https://sentry.io/api/0"
+SENTRY_ORG = "sandra-ai"
+
+
+def query_sentry_issues(args: dict, **kwargs) -> str:
+    project = args.get("project")
+    query = args.get("query", "is:unresolved")
+    stats_period = args.get("stats_period", "14d")
+    sort = args.get("sort", "date")
+    limit = args.get("limit", 25)
+
+    sentry_token = _env("SENTRY_AUTH_TOKEN")
+    if not sentry_token:
+        return _err("SENTRY_AUTH_TOKEN not configured")
+    if not project:
+        return _err("project is required (Sentry project slug)")
+
+    try:
+        r = httpx.get(
+            f"{SENTRY_API}/projects/{SENTRY_ORG}/{project}/issues/",
+            headers={"Authorization": f"Bearer {sentry_token}"},
+            params={"query": query, "statsPeriod": stats_period, "sort": sort, "limit": limit},
+            timeout=20,
+        )
+        r.raise_for_status()
+        data = r.json()
+    except Exception as e:
+        return _err(str(e))
+
+    return _ok(
+        [
+            {
+                "id": i["id"],
+                "title": i["title"],
+                "culprit": i.get("culprit"),
+                "level": i.get("level"),
+                "count": i.get("count"),
+                "userCount": i.get("userCount"),
+                "firstSeen": i.get("firstSeen"),
+                "lastSeen": i.get("lastSeen"),
+                "permalink": i.get("permalink"),
+            }
+            for i in data
+        ]
+    )
+
+
+def get_sentry_issue_detail(args: dict, **kwargs) -> str:
+    issue_id = args.get("issue_id")
+    sentry_token = _env("SENTRY_AUTH_TOKEN")
+    if not sentry_token:
+        return _err("SENTRY_AUTH_TOKEN not configured")
+    if not issue_id:
+        return _err("issue_id is required")
+
+    headers = {"Authorization": f"Bearer {sentry_token}"}
+    try:
+        r1 = httpx.get(f"{SENTRY_API}/issues/{issue_id}/", headers=headers, timeout=20)
+        r1.raise_for_status()
+        r2 = httpx.get(f"{SENTRY_API}/issues/{issue_id}/events/latest/", headers=headers, timeout=20)
+        r2.raise_for_status()
+        issue, event = r1.json(), r2.json()
+    except Exception as e:
+        return _err(str(e))
+
+    return _ok(
+        {
+            "id": issue_id,
+            "title": issue.get("title"),
+            "culprit": issue.get("culprit"),
+            "count": issue.get("count"),
+            "permalink": issue.get("permalink"),
+            "latest_event": {
+                "message": event.get("message"),
+                "tags": event.get("tags"),
+                "exception": event.get("entries", [{}])[0].get("data") if event.get("entries") else None,
+            },
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
 # Writes (gated)
 # ---------------------------------------------------------------------------
 

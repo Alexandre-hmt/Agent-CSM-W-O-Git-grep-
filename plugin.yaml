@@ -1,5 +1,5 @@
 name: sandra-triage-tools-v4
-version: 4.1.0
+version: 4.2.0
 description: Intercom/DB/vapi_app/platform_app/GitHub tools for the Sandra AI triage agent, ported from agent.py. v4 replaces local git grep with the GitHub Code Search API (no shell/local clone on this instance).
 author: Sandra AI
 provides_tools:
@@ -13,6 +13,8 @@ provides_tools:
   - get_pipecat_trace
   - search_github_code
   - post_intercom_note
+  - query_sentry_issues
+  - get_sentry_issue_detail
 # Credentials are intentionally not declared through requires_env. This plugin
 # exposes several independent services, and Hermes treats every requires_env
 # entry as a global load gate — one missing variable would refuse to load the
@@ -24,4 +26,5 @@ provides_tools:
 # VAPI_APP_API_KEY, PLATFORM_APP_URL, PLATFORM_APP_API_KEY,
 # GITHUB_SEARCH_TOKEN (NOT GITHUB_TOKEN — that name is reserved internally
 # by Hermes for its own Skills Hub feature and is invisible to plugin tools),
-# ALLOW_INTERCOM_NOTE_POSTING (must stay unset/false).
+# ALLOW_INTERCOM_NOTE_POSTING (must stay unset/false),
+# SENTRY_AUTH_TOKEN (read-only: org:read, project:read, event:read scopes).
