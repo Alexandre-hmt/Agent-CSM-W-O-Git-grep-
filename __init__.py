@@ -18,22 +18,16 @@ def register(ctx):
         handler=tools.get_intercom_ticket,
     )
     ctx.register_tool(
+        name="search_intercom_conversations",
+        toolset="project",
+        schema=schemas.SEARCH_INTERCOM_CONVERSATIONS,
+        handler=tools.search_intercom_conversations,
+    )
+    ctx.register_tool(
         name="view_attachment",
         toolset="project",
         schema=schemas.VIEW_ATTACHMENT,
         handler=tools.view_attachment,
-    )
-    ctx.register_tool(
-        name="query_vapi_app",
-        toolset="project",
-        schema=schemas.QUERY_VAPI_APP,
-        handler=tools.query_vapi_app,
-    )
-    ctx.register_tool(
-        name="query_business_unit_schedule",
-        toolset="project",
-        schema=schemas.QUERY_BUSINESS_UNIT_SCHEDULE,
-        handler=tools.query_business_unit_schedule,
     )
     ctx.register_tool(
         name="query_routing_destinations",

@@ -5,8 +5,7 @@ Ported from agent.py (Sandra Triage 2.0). v4 changes versus v3:
    shell access on this Hermes Cloud instance, and keeping a full clone
    of the company monorepo sitting on a third-party cloud instance was
    judged an unnecessary risk. It now calls the GitHub Code Search API
-   instead (same mechanism as the API-method fallback, see
-   `../../API METHOD/Agent.md`).
+   instead.
 2. httpx/psycopg2 imports are defensive (see below) so the whole plugin
    still registers even if a python_dependency failed to install —
    Hermes validates `python_dependencies` in plugin.yaml but never
@@ -75,60 +74,12 @@ def _err(message):
 
 
 # ---------------------------------------------------------------------------
-# vapi_app / platform_app (read-only API)
+# platform_app (read-only API)
+#
+# vapi_app moved to its own MCP server (2026-09-18, native tools generated
+# from vapi_app's OpenAPI spec via FastMCP) — no plugin tool for it
+# anymore. See Agent.md for how vapi_app capabilities are now reached.
 # ---------------------------------------------------------------------------
-
-_VAPI_APP_RESOURCE_PATHS = {
-    "capabilities": "/capabilities/client-capabilities",
-    "transfer_config": "/transfer-destinations",
-    "opening_hours": "/client-opening-hours",
-    "appointment_time_policy": "/appointment-time-policies",
-}
-
-
-def query_vapi_app(args: dict, **kwargs) -> str:
-    vapi_app_url = _env("VAPI_APP_URL")
-    if not vapi_app_url:
-        return _err("VAPI_APP_URL not configured")
-
-    resource = args.get("resource")
-    path = _VAPI_APP_RESOURCE_PATHS.get(resource)
-    if path is None:
-        return _err(f"unknown resource: {resource}")
-
-    params = {}
-    for key in ("phone_number", "dealership_id", "group_id", "workshop_uuid"):
-        if args.get(key):
-            params[key] = args[key]
-
-    try:
-        r = httpx.get(
-            f"{vapi_app_url}{path}",
-            headers={"x-api-key": _env("VAPI_APP_API_KEY")},
-            params=params,
-            timeout=15,
-        )
-        r.raise_for_status()
-        return _ok({"resource": resource, "data": r.json()})
-    except Exception as e:
-        return _err(str(e))
-
-
-def query_business_unit_schedule(args: dict, **kwargs) -> str:
-    vapi_app_url = _env("VAPI_APP_URL")
-    if not vapi_app_url:
-        return _err("VAPI_APP_URL not configured")
-    business_unit_id = args.get("business_unit_id")
-    try:
-        r = httpx.get(
-            f"{vapi_app_url}/business-units/{business_unit_id}",
-            headers={"x-api-key": _env("VAPI_APP_API_KEY")},
-            timeout=15,
-        )
-        r.raise_for_status()
-        return _ok({"business_unit_id": business_unit_id, "data": r.json()})
-    except Exception as e:
-        return _err(str(e))
 
 
 def query_routing_destinations(args: dict, **kwargs) -> str:
@@ -249,6 +200,58 @@ def get_intercom_ticket(args: dict, **kwargs) -> str:
     if warning:
         result["warning"] = warning
     return _ok(result)
+
+
+def search_intercom_conversations(args: dict, **kwargs) -> str:
+    # Cross-conversation history for the SAME client — different from
+    # get_intercom_ticket, which only reads one specific ticket. Replaces
+    # the native Intercom MCP's search_conversations now that MCP is
+    # removed (2026-09-18) — searches by contact email via Intercom's
+    # Search API. NOT independently verified against a live response yet
+    # (the exact query field name below, "source.author.email", is
+    # Intercom's documented field for this — confirm on first real use).
+    email = args.get("email")
+    exclude_ticket_id = args.get("exclude_ticket_id")
+    per_page = args.get("per_page", 10)
+    if not email:
+        return _err("email is required (search by the customer's contact email)")
+
+    headers = {
+        "Authorization": f"Bearer {_env('INTERCOM_TOKEN')}",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "query": {"field": "source.author.email", "operator": "=", "value": email},
+        "pagination": {"per_page": per_page},
+    }
+    try:
+        r = httpx.post(
+            "https://api.intercom.io/conversations/search",
+            headers=headers,
+            json=payload,
+            timeout=20,
+        )
+        r.raise_for_status()
+        data = r.json()
+    except Exception as e:
+        return _err(str(e))
+
+    results = []
+    for c in data.get("conversations", []):
+        if exclude_ticket_id and str(c.get("id")) == str(exclude_ticket_id):
+            continue
+        source = c.get("source", {})
+        body = re.sub(r"<[^>]+>", " ", source.get("body") or "")
+        results.append(
+            {
+                "ticket_id": c.get("id"),
+                "created_at": c.get("created_at"),
+                "title": c.get("title"),
+                "preview": body[:300],
+            }
+        )
+    return _ok({"count": len(results), "conversations": results})
 
 
 def view_attachment(args: dict, **kwargs) -> str:

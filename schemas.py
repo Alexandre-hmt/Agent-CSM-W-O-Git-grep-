@@ -25,6 +25,29 @@ GET_INTERCOM_TICKET = {
     },
 }
 
+SEARCH_INTERCOM_CONVERSATIONS = {
+    "name": "search_intercom_conversations",
+    "description": (
+        "Searches the client's OTHER past Intercom conversations (by "
+        "contact email) — different from get_intercom_ticket, which only "
+        "reads the one ticket currently being triaged. Use only when "
+        "there's a specific signal it matters: a possible recurring "
+        "pattern, or a need to understand the client's tone/history "
+        "before drafting a note. Not a reflex on every ticket — see the "
+        "intercom-conversation-context skill for when to actually call "
+        "this."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "email": {"type": "string", "description": "Customer's contact email, from get_intercom_ticket's result."},
+            "exclude_ticket_id": {"type": "string", "description": "The current ticket's id, to exclude it from results."},
+            "per_page": {"type": "integer"},
+        },
+        "required": ["email"],
+    },
+}
+
 VIEW_ATTACHMENT = {
     "name": "view_attachment",
     "description": (
@@ -40,82 +63,13 @@ VIEW_ATTACHMENT = {
     },
 }
 
-QUERY_VAPI_APP = {
-    "name": "query_vapi_app",
-    "description": (
-        "Read-only, via the vapi_app API (no DB connection), the "
-        "effective config for a phone number/dealership/group. "
-        "resource=\"capabilities\" (enabled/disabled, e.g. "
-        "warm_transfer_enabled/routing_transfer_enabled — often the first "
-        "reflex at Level 2); \"transfer_config\" (business units + "
-        "transfer_destinations, LIVE transfer during the call); "
-        "\"opening_hours\"; \"appointment_time_policy\" (field "
-        "reception_forbidden_days — this mechanism, NOT opening_hours, "
-        "actually filters the appointment slots proposed to the customer. "
-        "For a \"appointment proposed/booked on a closed day\" ticket, "
-        "always check BOTH: opening_hours can be correct — no line for "
-        "that day — while reception_forbidden_days is empty/null and "
-        "therefore blocks nothing in practice). For post-call ROUTING "
-        "(categorization after the call), see query_routing_destinations "
-        "separately. For transfer_config/opening_hours/"
-        "appointment_time_policy (not capabilities): phone_number alone "
-        "often returns [] even when a config really exists — the data "
-        "typically lives at the dealership_id level. If phone_number "
-        "returns [], always retry with dealership_id before concluding no "
-        "config exists."
-    ),
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "resource": {
-                "type": "string",
-                "enum": ["capabilities", "transfer_config", "opening_hours", "appointment_time_policy"],
-            },
-            "phone_number": {"type": "string"},
-            "dealership_id": {"type": "string"},
-            "group_id": {"type": "string"},
-            "workshop_uuid": {"type": "string", "description": "only used by appointment_time_policy"},
-        },
-        "required": ["resource"],
-    },
-}
-
-QUERY_BUSINESS_UNIT_SCHEDULE = {
-    "name": "query_business_unit_schedule",
-    "description": (
-        "Reads a business unit and ALL its nested schedules/hours. THIS "
-        "mechanism — NOT the \"hours\" field on a transfer_destination — "
-        "actually determines whether a transfer destination is considered "
-        "reachable at a given moment: a transfer_destination has a "
-        "business_unit_id (returned by "
-        "query_vapi_app(resource=\"transfer_config\")); if a schedule of "
-        "that business unit matches the context (priority phone_number > "
-        "dealership_id > group_id > shared), its hours ALWAYS take "
-        "priority over the destination's own \"hours\" field (a last "
-        "resort, never consulted if a matching schedule exists). For a "
-        "\"transfer proposed/executed at a time it shouldn't have been\" "
-        "ticket, check THIS mechanism, not just the hours shown on the "
-        "destination."
-    ),
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "business_unit_id": {
-                "type": "string",
-                "description": "comes from a transfer_destination's business_unit_id field",
-            },
-        },
-        "required": ["business_unit_id"],
-    },
-}
-
 QUERY_ROUTING_DESTINATIONS = {
     "name": "query_routing_destinations",
     "description": (
         "Read-only, via the platform_app API, post-call ROUTING "
         "destinations (e.g. \"Sales Secretary\" vs \"Workshop\") — "
-        "DIFFERENT from a live transfer (query_vapi_app "
-        "resource=\"transfer_config\"), confirmed empirically: a "
+        "DIFFERENT from a live transfer (the vapi_app MCP's "
+        "transfer-destinations capability), confirmed empirically: a "
         "dealership with a real recent transfer has an EMPTY "
         "transfer_config on the vapi_app side but a non-empty result "
         "here — post-call routing is often the mechanism actually used. "
@@ -142,7 +96,7 @@ QUERY_CALLS_ANALYTICS = {
         "elements. At least one criterion required. Always combine an "
         "unindexed field with customer_phone or a date range. Returns "
         "assistant_phone (not the dealership/switchboard number) — pass "
-        "that to query_vapi_app. If the returned fields (e.g. "
+        "that to the vapi_app MCP. If the returned fields (e.g. "
         "abandon_reason) are too vague, see get_pipecat_trace."
     ),
     "parameters": {

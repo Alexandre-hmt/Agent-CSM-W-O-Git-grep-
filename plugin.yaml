@@ -1,12 +1,11 @@
 name: sandra-triage-tools-v4
-version: 4.6.0
-description: Intercom/DB/vapi_app/platform_app/GitHub tools for the Sandra AI triage agent, ported from agent.py. v4 replaces local git grep with the GitHub Code Search API (no shell/local clone on this instance).
+version: 4.8.0
+description: Intercom/DB/platform_app/GitHub/Sentry tools for the Sandra AI triage agent, ported from agent.py. v4 replaces local git grep with the GitHub Code Search API (no shell/local clone on this instance). vapi_app moved to its own MCP server (2026-09-18) — no longer a plugin tool.
 author: Sandra AI
 provides_tools:
   - get_intercom_ticket
+  - search_intercom_conversations
   - view_attachment
-  - query_vapi_app
-  - query_business_unit_schedule
   - query_routing_destinations
   - query_calls_analytics
   - get_call_transcript
@@ -23,8 +22,8 @@ provides_tools:
 # only the credentials it needs, so the remaining tools stay usable
 # independently. Configure in Keys (Custom Keys), any name:
 # INTERCOM_TOKEN, INTERCOM_ADMIN_ID, DB_ANALYTICS_HOST, DB_ANALYTICS_PORT,
-# DB_ANALYTICS_NAME, DB_ANALYTICS_USER, DB_ANALYTICS_PASSWORD, VAPI_APP_URL,
-# VAPI_APP_API_KEY, PLATFORM_APP_URL, PLATFORM_APP_API_KEY,
+# DB_ANALYTICS_NAME, DB_ANALYTICS_USER, DB_ANALYTICS_PASSWORD,
+# PLATFORM_APP_URL, PLATFORM_APP_API_KEY,
 # GITHUB_SEARCH_TOKEN (NOT GITHUB_TOKEN — that name is reserved internally
 # by Hermes for its own Skills Hub feature and is invisible to plugin tools),
 # ALLOW_INTERCOM_NOTE_POSTING (must stay unset/false),
