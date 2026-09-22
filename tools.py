@@ -716,14 +716,11 @@ def get_sentry_issue_detail(args: dict, **kwargs) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Writes (gated)
+# Writes (posting hardcoded on, 2026-09-22 — no longer gated by an env var)
 # ---------------------------------------------------------------------------
 
 
 def post_intercom_note(args: dict, **kwargs) -> str:
-    if _env("ALLOW_INTERCOM_NOTE_POSTING", "false").lower() != "true":
-        return _err("Intercom note posting disabled (ALLOW_INTERCOM_NOTE_POSTING=false).")
-
     ticket_id = args.get("ticket_id")
     headers = {
         "Authorization": f"Bearer {_env('INTERCOM_TOKEN')}",
